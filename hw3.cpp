@@ -51,8 +51,13 @@ char * filename = NULL;
 int mode = MODE_DISPLAY;
 
 //you may want to make these smaller for debugging purposes
-#define WIDTH 640
-#define HEIGHT 480
+// #define WIDTH 640
+// #define HEIGHT 480
+
+#define WIDTH 40
+#define HEIGHT 30
+
+double aspect_ratio = double (WIDTH) / HEIGHT;
 
 //the field of view of the camera
 #define fov 60.0
@@ -76,7 +81,60 @@ void plot_pixel_display(int x,int y,unsigned char r,unsigned char g,unsigned cha
 void plot_pixel_jpeg(int x,int y,unsigned char r,unsigned char g,unsigned char b);
 void plot_pixel(int x,int y,unsigned char r,unsigned char g,unsigned char b);
 
+bool find_closest_intersection(Ray& r, double& min_t, double min_coorinates[3], std::string& type, Triangle* min_tri, Sphere* min_sphere) {
+  min_t = 1000000.0;
+  type = "tri";
+  double t;
+  double temp_intersection[3];
+  bool exists_intersect = false;
 
+  for(int idx = 0; idx < num_triangles; ++idx) {
+    bool intersect = r.intersection(triangles[idx], temp_intersection, t);
+    if(intersect) {
+      std::cout << "intersect" << std::endl;
+      std::cout << type << std::endl;
+      std::cout << t << std::endl;
+      exists_intersect = true;
+      if(t < min_t) {
+        min_t = t;
+        Utilities::duplicate(temp_intersection, min_coorinates);
+        min_tri = &triangles[idx];
+      }
+    }
+  }
+
+  for(int idx = 0; idx < num_spheres; ++idx) {
+    bool intersect = r.intersection(spheres[idx], temp_intersection, t);
+    if(intersect) {
+      exists_intersect = true;
+      if(t < min_t) {
+        std::cout << t << std::endl;
+        type = "sphere";
+        min_t = t;
+        Utilities::duplicate(temp_intersection, min_coorinates);
+        min_sphere = &spheres[idx];
+      }
+    }
+  }
+
+  return exists_intersect;
+}
+
+bool can_see_light(double point[3], Light& l)
+{
+  double t;
+  double min_coorinates[3];
+  std::string type;
+  Triangle* min_tri;
+  Sphere* min_sphere;
+
+
+  Ray shadow_ray(point[0], point[1], point[2], l.position[0] - point[0], l.position[1] - point[1], l.position[2] - point[2]);
+
+  bool exists_intersect = find_closest_intersection(shadow_ray, t, min_coorinates, type, min_tri, min_sphere);
+  if(exists_intersect && t < 1.0) return false;
+  return true;
+}
 
 void local_phong(double color_diffuse[3], double color_specular[3], double shininess, double point[3], double surface_normal[3], Light& light, double divide_mag, double colors[])
 {
@@ -121,9 +179,13 @@ void local_phong_sphere(Sphere& s, double point[3], double colors[])
 
   Utilities::normalize(surface_normal);
 
-
   for(int l = 0; l < num_lights; ++l) {
+    if(!can_see_light(point, lights[l])) {
+      continue;
+    }
+
     double colors_from_light[3];
+
     local_phong(s.color_diffuse, s.color_specular, s.shininess, point, surface_normal, lights[l], divide_mag, colors_from_light);
     for(int i = 0; i < 3; ++i) {
       colors[i] += colors_from_light[i];
@@ -203,6 +265,9 @@ void local_phong_triangle(Triangle& t, double point[3], double colors[])
   double surface_shininess = interpolated_shininess(barycentric, t.v);
 
   for(int l = 0; l < num_lights; ++l) {
+    if(!can_see_light(point, lights[l])) {
+      continue;
+    }
     double colors_from_light[3];
     local_phong(surface_color_diffuse, surface_color_specular, surface_shininess, point, surface_normal, lights[l], divide_mag, colors_from_light);
     for(int i = 0; i < 3; ++i) {
@@ -211,48 +276,51 @@ void local_phong_triangle(Triangle& t, double point[3], double colors[])
   }
 }
 
-bool find_closest_intersection(Ray& r, double& min_t, double min_coorinates[3], std::string& type, Triangle* min_tri, Sphere* min_sphere) {
-  min_t = 1000000.0;
-  type = "tri";
+void generate_color_for_ray(Ray& r, double colors[3])
+{
   double t;
-  double temp_intersection[3];
-  bool exists_intersect = false;
+  double min_coorinates[3];
+  std::string type;
+  Triangle* min_tri;
+  Sphere* min_sphere;
 
-  for(int idx = 0; idx < num_triangles; ++idx) {
-    bool intersect = r.intersection(triangles[idx], temp_intersection, t);
-    if(intersect) {
-      std::cout << "intersect" << std::endl;
-      std::cout << type << std::endl;
-      std::cout << t << std::endl;
-      exists_intersect = true;
-      if(t < min_t) {
-        min_t = t;
-        Utilities::duplicate(temp_intersection, min_coorinates);
-        min_tri = &triangles[idx];
-      }
+  bool exists_intersect = find_closest_intersection(r, t, min_coorinates, type, min_tri, min_sphere);
+  if(!exists_intersect) {
+    for(int i = 0; i < 3; ++i) {
+      colors[i] = ambient_light[i];
+    }
+  } else if(type == "tri") {
+    local_phong_triangle(*min_tri, min_coorinates, colors);
+  } else if(type == "sphere") {
+    local_phong_sphere(*min_sphere, min_coorinates, colors);
+  } 
+}
+
+Ray** cast_rays()
+{
+  double tan_fov_over_2 = tan(fov/2.0);
+  Ray*** rays = new Ray**[WIDTH];
+
+  double x_coord_base = -1.0 * aspect_ratio * tan_fov_over_2;
+
+  for(unsigned int x = 0; x < WIDTH; ++x)
+  {
+    rays[x] = new Ray*[HEIGHT];
+    double x_coord = x_coord_base + float(x) / WIDTH;
+    double y_coord_base = -1.0 * tan_fov_over_2;
+    for(unsigned int y = 0; y < HEIGHT; ++y)
+    {
+      double y_coord = y_coord_base + float(y) / HEIGHT;
+      rays[x][y] = new Ray(x_coord, y_coord, -1.0);
+
     }
   }
-
-  for(int idx = 0; idx < num_spheres; ++idx) {
-    bool intersect = r.intersection(spheres[idx], temp_intersection, t);
-    if(intersect) {
-      exists_intersect = true;
-      if(t < min_t) {
-        std::cout << t << std::endl;
-        type = "sphere";
-        min_t = t;
-        Utilities::duplicate(temp_intersection, min_coorinates);
-        min_sphere = &spheres[idx];
-      }
-    }
-  }
-
-  return exists_intersect;
 }
 
 //MODIFY THIS FUNCTION
 void draw_scene()
 {
+
   //a simple test output
   for(unsigned int x=0; x<WIDTH; x++)
   {
@@ -457,18 +525,6 @@ int main(int argc, char ** argv)
 
   glutInit(&argc,argv);
   loadScene(argv[1]);
-
-  Ray r1(0.1, -1.0, -2.0);
-  double t;
-  double intersection_point[3];
-  Triangle* min_tri;
-  Sphere* min_sphere;
-  std::string type;
-
-  std::cout << find_closest_intersection(r1, t, intersection_point, type, min_tri, min_sphere) << std::endl;
-  std::cout << "FINAL" << std::endl;
-  std::cout << type << std::endl;
-  std::cout << t << std::endl;
 
   glutInitDisplayMode(GLUT_RGBA | GLUT_SINGLE);
   glutInitWindowPosition(0,0);

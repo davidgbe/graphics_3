@@ -211,6 +211,45 @@ void local_phong_triangle(Triangle& t, double point[3], double colors[])
   }
 }
 
+bool find_closest_intersection(Ray& r, double& min_t, double min_coorinates[3], std::string& type, Triangle* min_tri, Sphere* min_sphere) {
+  min_t = 1000000.0;
+  type = "tri";
+  double t;
+  double temp_intersection[3];
+  bool exists_intersect = false;
+
+  for(int idx = 0; idx < num_triangles; ++idx) {
+    bool intersect = r.intersection(triangles[idx], temp_intersection, t);
+    if(intersect) {
+      std::cout << "intersect" << std::endl;
+      std::cout << type << std::endl;
+      std::cout << t << std::endl;
+      exists_intersect = true;
+      if(t < min_t) {
+        min_t = t;
+        Utilities::duplicate(temp_intersection, min_coorinates);
+        min_tri = &triangles[idx];
+      }
+    }
+  }
+
+  for(int idx = 0; idx < num_spheres; ++idx) {
+    bool intersect = r.intersection(spheres[idx], temp_intersection, t);
+    if(intersect) {
+      exists_intersect = true;
+      if(t < min_t) {
+        std::cout << t << std::endl;
+        type = "sphere";
+        min_t = t;
+        Utilities::duplicate(temp_intersection, min_coorinates);
+        min_sphere = &spheres[idx];
+      }
+    }
+  }
+
+  return exists_intersect;
+}
+
 //MODIFY THIS FUNCTION
 void draw_scene()
 {
@@ -420,16 +459,16 @@ int main(int argc, char ** argv)
   loadScene(argv[1]);
 
   Ray r1(0.1, -1.0, -2.0);
+  double t;
   double intersection_point[3];
-  r1.intersection(triangles[0], intersection_point);
-  for(int i = 0; i < 3; ++i) {
-    std::cout << i << ": " << intersection_point[i] << std::endl;
-  }
-  double colors[3];
-  local_phong_triangle(triangles[0], intersection_point, colors);
-  for(int i = 0; i < 3; ++i) {
-    std::cout << i << " SECOND: " << colors[i] << std::endl;
-  }
+  Triangle* min_tri;
+  Sphere* min_sphere;
+  std::string type;
+
+  std::cout << find_closest_intersection(r1, t, intersection_point, type, min_tri, min_sphere) << std::endl;
+  std::cout << "FINAL" << std::endl;
+  std::cout << type << std::endl;
+  std::cout << t << std::endl;
 
   glutInitDisplayMode(GLUT_RGBA | GLUT_SINGLE);
   glutInitWindowPosition(0,0);

@@ -23,8 +23,8 @@ Ray::Ray(std::vector<double>& vec) {
 
 Ray::~Ray() {}
 
-bool Ray::intersection(Sphere& s, double& t) {
-  double a, b, c = 0.0;
+bool Ray::intersection(Sphere& s, double intersection_point[3]) {
+  double a, b, c, t = 0.0;
   double center_start_diff;
   for(int i = 0; i < 3; ++i) {
     center_start_diff = start[i] - s.position[i];
@@ -62,11 +62,15 @@ bool Ray::intersection(Sphere& s, double& t) {
     t = std::min(t0, t1);
   } else {
     t = std::max(t0, t1);
-  } 
+  }
+  for(int i = 0; i < 3; ++i) {
+    intersection_point[i] = start[i] + vec[i] * t;
+  }
   return true;
 }
 
-bool Ray::intersection(Triangle& tri, double& t) {
+bool Ray::intersection(Triangle& tri, double intersection_point[3]) {
+  double t;
   double vec1[3];
   double vec2[3];
 
@@ -116,6 +120,9 @@ bool Ray::intersection(Triangle& tri, double& t) {
   if(u < 0.0 || v < 0.0) return false;
   if(u + v > 1.0) return false; 
   t = interect_with_plane_t;
+  for(int i = 0; i < 3; ++i) {
+    intersection_point[i] = start[i] + vec[i] * t;
+  }
   return true;
 }
 

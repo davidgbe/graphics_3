@@ -26,6 +26,9 @@
 #endif
 
 #include <iostream>
+#include <math.h>
+
+#include <utilities.h>
 
 #include <light.h>
 #include <sphere.h>
@@ -61,6 +64,10 @@ Sphere spheres[MAX_SPHERES];
 Light lights[MAX_LIGHTS];
 double ambient_light[3];
 
+double a = 1.0;
+double b = 1.0;
+double c = 1.0;
+
 int num_triangles = 0;
 int num_spheres = 0;
 int num_lights = 0;
@@ -68,6 +75,141 @@ int num_lights = 0;
 void plot_pixel_display(int x,int y,unsigned char r,unsigned char g,unsigned char b);
 void plot_pixel_jpeg(int x,int y,unsigned char r,unsigned char g,unsigned char b);
 void plot_pixel(int x,int y,unsigned char r,unsigned char g,unsigned char b);
+
+
+
+void local_phong(double color_diffuse[3], double color_specular[3], double shininess, double point[3], double surface_normal[3], Light& light, double divide_mag, double colors[])
+{
+  double normal_to_light[3];
+  for(int i = 0; i < 3; ++i) {
+    normal_to_light[i] = light.position[i] - point[i];
+  }
+  Utilities::normalize(normal_to_light);
+  double reflection_normal[3];
+  double constant = 2.0 * Utilities::dot_product(normal_to_light, surface_normal);
+  for(int i = 0; i < 3; ++i) {
+    reflection_normal[i] = constant * surface_normal[i] - normal_to_light[i];
+  }
+  double viewer_normal[3];
+  Utilities::duplicate(point, viewer_normal);
+  Utilities::normalize(viewer_normal);
+
+  double light_dot_normal = Utilities::dot_product(normal_to_light, surface_normal);
+  double reflection_dot_view_norm = Utilities::dot_product(reflection_normal, viewer_normal);
+
+  for(int i = 0; i < 3; ++i) {
+    colors[i] = color_diffuse[i] * light_dot_normal;
+    colors[i] += pow(color_specular[i] * reflection_dot_view_norm, shininess);
+    colors[i] /= divide_mag;
+    colors[i] += ambient_light[i];
+  }
+}
+
+void local_phong_sphere(Sphere& s, double point[3], double colors[])
+{
+  double q = Utilities::magnitude(point);
+  double divide_mag = 1.0 / ( a * pow(a, 2.0) + b + q + c);
+
+  for(int i = 0; i < 3; ++i) {
+    colors[i] = 0.0;
+  }
+
+  double surface_normal[3];
+  for(int i = 0; i < 3; ++i) {
+    surface_normal[i] = point[i] - s.position[i];
+  }
+
+  Utilities::normalize(surface_normal);
+
+
+  for(int l = 0; l < num_lights; ++l) {
+    double colors_from_light[3];
+    local_phong(s.color_diffuse, s.color_specular, s.shininess, point, surface_normal, lights[l], divide_mag, colors_from_light);
+    for(int i = 0; i < 3; ++i) {
+      colors[i] += colors_from_light[i];
+    }
+  }
+}
+
+void get_barycentric(Triangle& t, double point[3], double barycentric[3])
+{
+  double vec01[3];
+  double vec02[3];
+  double vec12[3];
+  double vec0point[3];
+  double vec1point[3];
+  for(int i = 0; i < 3; ++i) {
+    vec01[i] = t.v[1].position[i] - t.v[0].position[i];
+    vec02[i] = t.v[2].position[i] - t.v[0].position[i];
+    vec12[i] = t.v[2].position[i] - t.v[1].position[i];
+    vec0point[3] = point[i] = t.v[0].position[i];
+    vec1point[3] = point[i] = t.v[1].position[i];
+  }
+
+  double total_area = Utilities::triangle_area(vec01, vec02);
+  barycentric[0] = Utilities::triangle_area(vec01, vec0point) / total_area;
+  barycentric[1] = Utilities::triangle_area(vec12, vec1point) / total_area;
+  barycentric[2] = 1.0 - barycentric[1] - barycentric[0];
+}
+
+void interpolated_normal(double barycentric[3], Vertex v[3], double res[])
+{
+  for(int i = 0; i < 3; ++i) {
+    res[i] = barycentric[0] * v[0].normal[i] + barycentric[1] * v[1].normal[i] + barycentric[2] * v[2].normal[i];
+  }
+}
+
+void interpolated_color_diffuse(double barycentric[3], Vertex v[3], double res[])
+{
+  for(int i = 0; i < 3; ++i) {
+    res[i] = barycentric[0] * v[0].color_diffuse[i] + barycentric[1] * v[1].color_diffuse[i] + barycentric[2] * v[2].color_diffuse[i];
+  }
+}
+
+void interpolated_color_specular(double barycentric[3], Vertex v[3], double res[])
+{
+  for(int i = 0; i < 3; ++i) {
+    res[i] = barycentric[0] * v[0].color_specular[i] + barycentric[1] * v[1].color_specular[i] + barycentric[2] * v[2].color_specular[i];
+  }
+}
+
+double interpolated_shininess(double barycentric[3], Vertex v[3])
+{
+  return barycentric[0] * v[0].shininess + barycentric[1] * v[1].shininess + barycentric[2] * v[2].shininess;
+}
+
+void local_phong_triangle(Triangle& t, double point[3], double colors[])
+{
+  double q = Utilities::magnitude(point);
+  double divide_mag = 1.0 / ( a * pow(a, 2.0) + b + q + c);
+
+  for(int i = 0; i < 3; ++i) {
+    colors[i] = 0.0;
+  }
+
+  double barycentric[3];
+  get_barycentric(t, point, barycentric);
+
+  double surface_normal[3];
+  interpolated_normal(barycentric, t.v, surface_normal);
+  Utilities::normalize(surface_normal);
+
+  double surface_color_diffuse[3];
+  interpolated_color_specular(barycentric, t.v, surface_color_diffuse);
+
+  double surface_color_specular[3];
+  interpolated_color_specular(barycentric, t.v, surface_color_specular);
+
+  double surface_shininess = interpolated_shininess(barycentric, t.v);
+
+  for(int l = 0; l < num_lights; ++l) {
+    double colors_from_light[3];
+    local_phong(surface_color_diffuse, surface_color_specular, surface_shininess, point, surface_normal, lights[l], divide_mag, colors_from_light);
+    for(int i = 0; i < 3; ++i) {
+      colors[i] += colors_from_light[i];
+    }
+  }
+}
 
 //MODIFY THIS FUNCTION
 void draw_scene()
@@ -278,10 +420,16 @@ int main(int argc, char ** argv)
   loadScene(argv[1]);
 
   Ray r1(0.1, -1.0, -2.0);
-  double intersect;
-  std::cout << "RESULT:" << std::endl;
-  std::cout << r1.intersection(triangles[0], intersect) << std::endl;
-  std::cout << intersect << std::endl;
+  double intersection_point[3];
+  r1.intersection(triangles[0], intersection_point);
+  for(int i = 0; i < 3; ++i) {
+    std::cout << i << ": " << intersection_point[i] << std::endl;
+  }
+  double colors[3];
+  local_phong_triangle(triangles[0], intersection_point, colors);
+  for(int i = 0; i < 3; ++i) {
+    std::cout << i << " SECOND: " << colors[i] << std::endl;
+  }
 
   glutInitDisplayMode(GLUT_RGBA | GLUT_SINGLE);
   glutInitWindowPosition(0,0);

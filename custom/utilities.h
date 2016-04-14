@@ -77,6 +77,16 @@ class Utilities {
       return sum;
     }
 
+    static double magnitude(double vec[]) {
+      return sqrt(Utilities::dot_product(vec, vec));
+    }
+
+    static double triangle_area(double vec1[], double vec2[]) {
+      double total_area_vec[3];
+      Utilities::cross_product(vec1, vec2, total_area_vec);
+      return 0.5 * Utilities::magnitude(total_area_vec);
+    }
+
     static int non_ortho_plane(double tri_vec_1[], double tri_vec_2[]) {
       double trial_vec[3];
       trial_vec[0] = 1.0;
@@ -95,6 +105,12 @@ class Utilities {
     static void mult_by_scalar(double vec[], double c) {
       for(int i = 0; i < 3; ++i) {
         vec[i] = c * vec[i];
+      }
+    }
+
+    static void duplicate(double to_dup[], double dup[]) {
+      for(int i = 0; i < 3; ++i) {
+        to_dup[i] = dup[i];
       }
     }
 };

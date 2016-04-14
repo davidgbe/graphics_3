@@ -14,8 +14,8 @@ class Ray {
     Ray(std::vector<double>& start, std::vector<double>& vec);
     Ray(std::vector<double>& vec);
     ~Ray();
-    bool intersection(Sphere& s, double& t);
-    bool intersection(Triangle& tri, double& t);
+    bool intersection(Sphere& s, double intersection_point[3]);
+    bool intersection(Triangle& tri, double intersection_point[3]);
 
   private:
     void set_start_and_vector(double start_x, double start_y, double start_z, double vec_x, double vec_y, double vec_z);

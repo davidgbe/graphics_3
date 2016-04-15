@@ -81,7 +81,7 @@ void plot_pixel_display(int x,int y,unsigned char r,unsigned char g,unsigned cha
 void plot_pixel_jpeg(int x,int y,unsigned char r,unsigned char g,unsigned char b);
 void plot_pixel(int x,int y,unsigned char r,unsigned char g,unsigned char b);
 
-bool find_closest_intersection(Ray& r, double& min_t, double min_coorinates[3], std::string& type, Triangle* min_tri, Sphere* min_sphere) {
+bool find_closest_intersection(Ray& r, double& min_t, double min_coorinates[3], std::string& type, Triangle** min_tri, Sphere** min_sphere) {
   min_t = 1000000.0;
   type = "tri";
   double t;
@@ -95,7 +95,7 @@ bool find_closest_intersection(Ray& r, double& min_t, double min_coorinates[3], 
       if(t < min_t) {
         min_t = t;
         Utilities::duplicate(temp_intersection, min_coorinates);
-        min_tri = &(triangles[idx]);
+        *min_tri = triangles + idx;
       }
     }
   }
@@ -109,7 +109,7 @@ bool find_closest_intersection(Ray& r, double& min_t, double min_coorinates[3], 
         type = "sphere";
         min_t = t;
         Utilities::duplicate(temp_intersection, min_coorinates);
-        min_sphere = &(spheres[idx]);
+        *min_sphere = spheres + idx;
       }
     }
   }
@@ -128,7 +128,7 @@ bool can_see_light(double point[3], Light& l)
 
   Ray shadow_ray(point[0], point[1], point[2], l.position[0] - point[0], l.position[1] - point[1], l.position[2] - point[2]);
 
-  bool exists_intersect = find_closest_intersection(shadow_ray, t, min_coorinates, type, min_tri, min_sphere);
+  bool exists_intersect = find_closest_intersection(shadow_ray, t, min_coorinates, type, &min_tri, &min_sphere);
   if(exists_intersect && t < 1.0) return false;
   return true;
 }
@@ -287,7 +287,7 @@ void generate_color_for_ray(Ray& r, double colors[3])
   Triangle* min_tri;
   Sphere* min_sphere;
 
-  bool exists_intersect = find_closest_intersection(r, t, min_coorinates, type, min_tri, min_sphere);
+  bool exists_intersect = find_closest_intersection(r, t, min_coorinates, type, &min_tri, &min_sphere);
   // std::cout << "INTERSECT" << std::endl;
   // std::cout << exists_intersect << std::endl;
   // std::cout << type << std::endl;

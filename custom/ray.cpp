@@ -96,32 +96,13 @@ bool Ray::intersection(Triangle& tri, double intersection_point[3], double& t) {
   int to_set = 0;
   for(int i = 0; i < 3; ++i) {
     if(i != plane) {
-      ray_intersect_2d[to_set] = ray_intersect[to_set];
-      vec1_2d[to_set] = vec1[to_set];
-      vec2_2d[to_set] = vec2[to_set];
-      tri_base_point[to_set] = tri.v[0].position[to_set];
+      ray_intersect_2d[to_set] = ray_intersect[i];
+      vec1_2d[to_set] = vec1[i];
+      vec2_2d[to_set] = vec2[i];
+      tri_base_point[to_set] = tri.v[0].position[i];
       ++to_set;
     }
   }
-  // std::cout << "RAY INTERSECT" << std::endl;
-  // for(int i = 0; i < 2; ++i) {
-  //   std::cout << ray_intersect_2d[i] << std::endl;
-  // }
-  // std::cout << "vec1" << std::endl;
-  // for(int i = 0; i < 2; ++i) {
-  //   std::cout << vec1_2d[i] << std::endl;
-
-  // }
-  // std::cout << "vec2" << std::endl;
-  // for(int i = 0; i < 2; ++i) {
-  //   std::cout << vec2_2d[i] << std::endl;
-
-  // }
-  // std::cout << "base" << std::endl;
-  // for(int i = 0; i < 2; ++i) {
-  //   std::cout << tri_base_point[i] << std::endl;
-
-  // }
   
   double u, v;
 
@@ -182,8 +163,17 @@ bool Ray::intersect_with_plane(double vec1[], double vec2[], double point[], dou
 }
 
 bool Ray::intersect_with_plane(double normal[], double point[], double& t) {
+  // std::cout << "normal" << std::endl;
+  // for(int i = 0; i < 3; ++i) {
+  //   std::cout << normal[i] << std::endl;
+  // }
+  // std::cout << "vec" << std::endl;
+  // for(int i = 0; i < 3; ++i) {
+  //   std::cout << vec[i] << std::endl;
+  // }
   double d = Utilities::dot_product(normal, point);
   double normal_dot_ray_vec = Utilities::dot_product(normal, vec);
+
   if(normal_dot_ray_vec == 0.0) return false;
   t = (d - Utilities::dot_product(normal, start)) / normal_dot_ray_vec;
   return true;

@@ -70,8 +70,8 @@ Light lights[MAX_LIGHTS];
 double ambient_light[3];
 
 double a = 0.000005;
-double b = 0.000007;
-double c = 0.000001;
+double b = 0.000002;
+double c = 0.004;
 
 int num_triangles = 0;
 int num_spheres = 0;
@@ -120,8 +120,6 @@ bool find_closest_intersection(
     }
   }
 
-  // std::cout << col_index << std::endl;
-
   return exists_intersect;
 }
 
@@ -136,9 +134,10 @@ bool can_see_light(double point[3], Light& l)
   Ray shadow_ray(point[0], point[1], point[2], l.position[0] - point[0], l.position[1] - point[1], l.position[2] - point[2]);
 
   bool exists_intersect = find_closest_intersection(shadow_ray, t, min_coorinates, type, col_index);
-  // std::cout << "EXISTS: " << exists_intersect << std::endl;
-  // std::cout << "t: " << t << std::endl;
-  if(exists_intersect && t < 1.0) return false;
+
+  if(exists_intersect && t < 1.0) {
+    return false;
+  }
   return true;
 }
 
@@ -149,10 +148,7 @@ void local_phong(double color_diffuse[3], double color_specular[3], double shini
     normal_to_light[i] = light.position[i] - point[i];
   }
   Utilities::normalize(normal_to_light);
-  // std::cout << "light:" << std::endl;
-  // for(int i = 0; i < 3; ++i) {
-  //   std::cout << normal_to_light[i] << std::endl;
-  // }
+
   double reflection_normal[3];
   double constant = 2.0 * Utilities::dot_product(normal_to_light, surface_normal);
   for(int i = 0; i < 3; ++i) {
@@ -168,12 +164,6 @@ void local_phong(double color_diffuse[3], double color_specular[3], double shini
 
   if(light_dot_normal < 0.0) light_dot_normal = 0.0;
   if(reflection_dot_view_norm < 0.0) reflection_dot_view_norm = 0.0;
-
-  std::cout << "light:" << std::endl;
-  std::cout << light_dot_normal << std::endl;
-
-  std::cout << "refl:" << std::endl;
-  std::cout << reflection_dot_view_norm << std::endl;
 
   for(int i = 0; i < 3; ++i) {
     colors[i] = color_diffuse[i] * light_dot_normal;
@@ -235,11 +225,6 @@ void get_barycentric(Triangle& t, double point[3], double barycentric[3])
   barycentric[0] = Utilities::triangle_area(vec01, vec0point) / total_area;
   barycentric[1] = Utilities::triangle_area(vec12, vec1point) / total_area;
   barycentric[2] = 1.0 - barycentric[1] - barycentric[0];
-
-  // std::cout << "barycentric" << std::endl;
-  // for(int i = 0; i < 3; ++i) {
-  //   std::cout << barycentric[i] << std::endl;
-  // }
 }
 
 void interpolated_normal(double barycentric[3], Vertex v[3], double res[])
@@ -291,13 +276,10 @@ void local_phong_triangle(int col_index, double point[3], double colors[])
   double surface_color_specular[3];
   interpolated_color_specular(barycentric, t.v, surface_color_specular);
 
-
   double surface_shininess = interpolated_shininess(barycentric, t.v);
 
   for(int l = 0; l < num_lights; ++l) {
     if(!can_see_light(point, lights[l])) {
-
-      // std::cout << "blocked: " << l << std::endl;
       continue;
     }
     double colors_from_light[3];
@@ -371,10 +353,11 @@ void draw_scene()
     for(unsigned int y=0; y<HEIGHT; y++)
     {
       colors_for_ray = all_colors[x][y];
-      // std::cout << "colors" << std::endl;
-      // for(int i = 0; i < 3; ++i) {
-      //   std::cout << colors_for_ray[i] << std::endl;
-      // }
+      for(int i = 0; i < 3; ++i) {
+        if(colors_for_ray[i] > 255.0) {
+          colors_for_ray[i] = 255.0;
+        }
+      }
       plot_pixel(x, y, colors_for_ray[0], colors_for_ray[1], colors_for_ray[2]);
     }
     glEnd();
@@ -572,12 +555,6 @@ int main(int argc, char ** argv)
 
   glutInit(&argc,argv);
   loadScene(argv[1]);
-
-  // double intersection[3];
-  // double t;
-  // Ray r1(5.49202, -1.63218, 0.446906);
-  // std::cout << r1.intersection(triangles[1], intersection, t) << std::endl;
-  // std::cout << "t: " << t << std::endl;
 
   glutInitDisplayMode(GLUT_RGBA | GLUT_SINGLE);
   glutInitWindowPosition(0,0);

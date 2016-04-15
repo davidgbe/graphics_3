@@ -4,6 +4,7 @@
 #include <math.h>
 #include <iostream>
 #include <vector>
+#include <string>
 
 class Utilities {
   public:
@@ -89,17 +90,22 @@ class Utilities {
     }
 
     static int non_ortho_plane(double tri_vec_1[], double tri_vec_2[]) {
+      double cross_prod[3];
+      Utilities::cross_product(tri_vec_1, tri_vec_2, cross_prod);
       double trial_vec[3];
       trial_vec[0] = 1.0;
       trial_vec[1] = 0.0;
       trial_vec[2] = 0.0;
-      if(Utilities::dot_product(trial_vec, tri_vec_1) != 0.0) return 0;
+      double dot = Utilities::dot_product(trial_vec, cross_prod);
+      if(dot > 0.00005 || dot < -.00005) return 0;
       trial_vec[0] = 0.0;
       trial_vec[1] = 1.0;
-      if(Utilities::dot_product(trial_vec, tri_vec_1) != 0.0) return 1;
+      dot = Utilities::dot_product(trial_vec, cross_prod);
+      if(dot > 0.00005 || dot < -.00005) return 1;
       trial_vec[1] = 0.0;
       trial_vec[2] = 1.0;
-      if(Utilities::dot_product(trial_vec, tri_vec_1) != 0.0) return 2;
+      dot = Utilities::dot_product(trial_vec, cross_prod);
+      if(dot > 0.00005 || dot < -.00005) return 2;
       return -1;
     }
 
@@ -112,6 +118,13 @@ class Utilities {
     static void duplicate(double to_dup[], double dup[]) {
       for(int i = 0; i < 3; ++i) {
         dup[i] = to_dup[i];
+      }
+    }
+
+    static void print_vec(double vec[], std::string name) {
+      std::cout << name << std::endl;
+      for(int i = 0; i < 3; ++i) {
+        std::cout << vec[i] << std::endl;
       }
     }
 };

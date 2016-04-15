@@ -119,6 +119,9 @@ bool Ray::intersection(Triangle& tri, double intersection_point[3], double& t) {
   if(u < 0.0 || v < 0.0) return false;
   if(u + v > 1.0) return false; 
   t = interect_with_plane_t;
+  if(t < 0.0) {
+    return false;
+  }
   for(int i = 0; i < 3; ++i) {
     intersection_point[i] = start[i] + vec[i] * t;
   }

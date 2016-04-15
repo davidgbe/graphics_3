@@ -51,11 +51,11 @@ char * filename = NULL;
 int mode = MODE_DISPLAY;
 
 //you may want to make these smaller for debugging purposes
-// #define WIDTH 640
-// #define HEIGHT 480
+#define WIDTH 640
+#define HEIGHT 480
 
-#define WIDTH 40
-#define HEIGHT 30
+// #define WIDTH 40
+// #define HEIGHT 30
 
 double aspect_ratio = double (WIDTH) / HEIGHT;
 
@@ -91,14 +91,11 @@ bool find_closest_intersection(Ray& r, double& min_t, double min_coorinates[3], 
   for(int idx = 0; idx < num_triangles; ++idx) {
     bool intersect = r.intersection(triangles[idx], temp_intersection, t);
     if(intersect) {
-      std::cout << "intersect" << std::endl;
-      std::cout << type << std::endl;
-      std::cout << t << std::endl;
       exists_intersect = true;
       if(t < min_t) {
         min_t = t;
         Utilities::duplicate(temp_intersection, min_coorinates);
-        min_tri = &triangles[idx];
+        min_tri = &(triangles[idx]);
       }
     }
   }
@@ -112,7 +109,7 @@ bool find_closest_intersection(Ray& r, double& min_t, double min_coorinates[3], 
         type = "sphere";
         min_t = t;
         Utilities::duplicate(temp_intersection, min_coorinates);
-        min_sphere = &spheres[idx];
+        min_sphere = &(spheres[idx]);
       }
     }
   }
@@ -195,6 +192,12 @@ void local_phong_sphere(Sphere& s, double point[3], double colors[])
 
 void get_barycentric(Triangle& t, double point[3], double barycentric[3])
 {
+  std::cout << "HERE" << std::endl;
+  std::cout << t.v[0].position[2] << std::endl;
+  std::cout << "HERE" << std::endl;
+  for(int i = 0; i < 3; ++i) {
+    std::cout << point[i] << std::endl;
+  }
   double vec01[3];
   double vec02[3];
   double vec12[3];
@@ -207,8 +210,8 @@ void get_barycentric(Triangle& t, double point[3], double barycentric[3])
     vec0point[3] = point[i] = t.v[0].position[i];
     vec1point[3] = point[i] = t.v[1].position[i];
   }
-
   double total_area = Utilities::triangle_area(vec01, vec02);
+  std::cout << "AREA: " << total_area << std::endl;
   barycentric[0] = Utilities::triangle_area(vec01, vec0point) / total_area;
   barycentric[1] = Utilities::triangle_area(vec12, vec1point) / total_area;
   barycentric[2] = 1.0 - barycentric[1] - barycentric[0];
@@ -285,13 +288,21 @@ void generate_color_for_ray(Ray& r, double colors[3])
   Sphere* min_sphere;
 
   bool exists_intersect = find_closest_intersection(r, t, min_coorinates, type, min_tri, min_sphere);
+  // std::cout << "INTERSECT" << std::endl;
+  // std::cout << exists_intersect << std::endl;
+  // std::cout << type << std::endl;
+  // for(int i = 0; i < 3; ++i) {
+  //   std::cout << min_coorinates[i] << std::endl;
+  // }
   if(!exists_intersect) {
     for(int i = 0; i < 3; ++i) {
       colors[i] = ambient_light[i];
     }
   } else if(type == "tri") {
+    std::cout << type << std::endl;
     local_phong_triangle(*min_tri, min_coorinates, colors);
   } else if(type == "sphere") {
+    std::cout << type << std::endl;
     local_phong_sphere(*min_sphere, min_coorinates, colors);
   } 
 }
@@ -306,12 +317,14 @@ Ray** cast_rays()
   for(unsigned int x = 0; x < WIDTH; ++x)
   {
     rays[x] = new Ray*[HEIGHT];
-    double x_coord = x_coord_base + float(x) / WIDTH;
+    double x_coord = x_coord_base + (float(x) / WIDTH) * -2.0 * x_coord_base;
     double y_coord_base = -1.0 * tan_fov_over_2;
     for(unsigned int y = 0; y < HEIGHT; ++y)
     {
-      double y_coord = y_coord_base + float(y) / HEIGHT;
+      double y_coord = y_coord_base + (float(y) / HEIGHT) * -2.0 * y_coord_base;
       rays[x][y] = new Ray(x_coord, y_coord, -1.0);
+      double colors[3];
+      generate_color_for_ray(*(rays[x][y]), colors);
 
     }
   }
@@ -320,7 +333,7 @@ Ray** cast_rays()
 //MODIFY THIS FUNCTION
 void draw_scene()
 {
-
+  cast_rays();
   //a simple test output
   for(unsigned int x=0; x<WIDTH; x++)
   {

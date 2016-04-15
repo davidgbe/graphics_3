@@ -54,13 +54,13 @@ int mode = MODE_DISPLAY;
 #define WIDTH 640
 #define HEIGHT 480
 
-// #define WIDTH 40
-// #define HEIGHT 30
+// #define WIDTH 400
+// #define HEIGHT 300
 
 double aspect_ratio = double (WIDTH) / HEIGHT;
 
 //the field of view of the camera
-#define fov 60.0
+#define fov 30.0
 
 unsigned char buffer[HEIGHT][WIDTH][3];
 
@@ -69,9 +69,9 @@ Sphere spheres[MAX_SPHERES];
 Light lights[MAX_LIGHTS];
 double ambient_light[3];
 
-double a = 1.0;
-double b = 1.0;
-double c = 1.0;
+double a = 0.000005;
+double b = 0.000007;
+double c = 0.000001;
 
 int num_triangles = 0;
 int num_spheres = 0;
@@ -81,38 +81,46 @@ void plot_pixel_display(int x,int y,unsigned char r,unsigned char g,unsigned cha
 void plot_pixel_jpeg(int x,int y,unsigned char r,unsigned char g,unsigned char b);
 void plot_pixel(int x,int y,unsigned char r,unsigned char g,unsigned char b);
 
-bool find_closest_intersection(Ray& r, double& min_t, double min_coorinates[3], std::string& type, Triangle** min_tri, Sphere** min_sphere) {
+bool find_closest_intersection(
+  Ray& r,
+  double& min_t,
+  double min_coorinates[3],
+  std::string& type,
+  int& col_index)
+{
   min_t = 1000000.0;
   type = "tri";
   double t;
   double temp_intersection[3];
   bool exists_intersect = false;
+  col_index = -1;
 
   for(int idx = 0; idx < num_triangles; ++idx) {
     bool intersect = r.intersection(triangles[idx], temp_intersection, t);
-    if(intersect) {
+    if(intersect && t > .001) {
       exists_intersect = true;
       if(t < min_t) {
         min_t = t;
         Utilities::duplicate(temp_intersection, min_coorinates);
-        *min_tri = triangles + idx;
+        col_index = idx;
       }
     }
   }
 
   for(int idx = 0; idx < num_spheres; ++idx) {
     bool intersect = r.intersection(spheres[idx], temp_intersection, t);
-    if(intersect) {
+    if(intersect && t > .001) {
       exists_intersect = true;
       if(t < min_t) {
-        std::cout << t << std::endl;
         type = "sphere";
         min_t = t;
         Utilities::duplicate(temp_intersection, min_coorinates);
-        *min_sphere = spheres + idx;
+        col_index = idx;
       }
     }
   }
+
+  // std::cout << col_index << std::endl;
 
   return exists_intersect;
 }
@@ -122,13 +130,14 @@ bool can_see_light(double point[3], Light& l)
   double t;
   double min_coorinates[3];
   std::string type;
-  Triangle* min_tri;
-  Sphere* min_sphere;
+  int col_index;
 
 
   Ray shadow_ray(point[0], point[1], point[2], l.position[0] - point[0], l.position[1] - point[1], l.position[2] - point[2]);
 
-  bool exists_intersect = find_closest_intersection(shadow_ray, t, min_coorinates, type, &min_tri, &min_sphere);
+  bool exists_intersect = find_closest_intersection(shadow_ray, t, min_coorinates, type, col_index);
+  // std::cout << "EXISTS: " << exists_intersect << std::endl;
+  // std::cout << "t: " << t << std::endl;
   if(exists_intersect && t < 1.0) return false;
   return true;
 }
@@ -140,6 +149,10 @@ void local_phong(double color_diffuse[3], double color_specular[3], double shini
     normal_to_light[i] = light.position[i] - point[i];
   }
   Utilities::normalize(normal_to_light);
+  // std::cout << "light:" << std::endl;
+  // for(int i = 0; i < 3; ++i) {
+  //   std::cout << normal_to_light[i] << std::endl;
+  // }
   double reflection_normal[3];
   double constant = 2.0 * Utilities::dot_product(normal_to_light, surface_normal);
   for(int i = 0; i < 3; ++i) {
@@ -147,23 +160,33 @@ void local_phong(double color_diffuse[3], double color_specular[3], double shini
   }
   double viewer_normal[3];
   Utilities::duplicate(point, viewer_normal);
+  Utilities::mult_by_scalar(viewer_normal, -1.0);
   Utilities::normalize(viewer_normal);
 
   double light_dot_normal = Utilities::dot_product(normal_to_light, surface_normal);
   double reflection_dot_view_norm = Utilities::dot_product(reflection_normal, viewer_normal);
 
+  if(light_dot_normal < 0.0) light_dot_normal = 0.0;
+  if(reflection_dot_view_norm < 0.0) reflection_dot_view_norm = 0.0;
+
+  std::cout << "light:" << std::endl;
+  std::cout << light_dot_normal << std::endl;
+
+  std::cout << "refl:" << std::endl;
+  std::cout << reflection_dot_view_norm << std::endl;
+
   for(int i = 0; i < 3; ++i) {
     colors[i] = color_diffuse[i] * light_dot_normal;
-    colors[i] += pow(color_specular[i] * reflection_dot_view_norm, shininess);
+    colors[i] += (color_specular[i] * pow(reflection_dot_view_norm, shininess));
     colors[i] /= divide_mag;
-    colors[i] += ambient_light[i];
   }
 }
 
-void local_phong_sphere(Sphere& s, double point[3], double colors[])
+void local_phong_sphere(int col_index, double point[3], double colors[])
 {
+  Sphere s = spheres[col_index];
   double q = Utilities::magnitude(point);
-  double divide_mag = 1.0 / ( a * pow(a, 2.0) + b + q + c);
+  double divide_mag = a * pow(q, 2.0) + b * q + c;
 
   for(int i = 0; i < 3; ++i) {
     colors[i] = 0.0;
@@ -180,7 +203,6 @@ void local_phong_sphere(Sphere& s, double point[3], double colors[])
     if(!can_see_light(point, lights[l])) {
       continue;
     }
-
     double colors_from_light[3];
 
     local_phong(s.color_diffuse, s.color_specular, s.shininess, point, surface_normal, lights[l], divide_mag, colors_from_light);
@@ -188,16 +210,14 @@ void local_phong_sphere(Sphere& s, double point[3], double colors[])
       colors[i] += colors_from_light[i];
     }
   }
+
+  for(int i = 0; i < 3; ++i) {
+    colors[i] += ambient_light[i];
+  }
 }
 
 void get_barycentric(Triangle& t, double point[3], double barycentric[3])
 {
-  std::cout << "HERE" << std::endl;
-  std::cout << t.v[0].position[2] << std::endl;
-  std::cout << "HERE" << std::endl;
-  for(int i = 0; i < 3; ++i) {
-    std::cout << point[i] << std::endl;
-  }
   double vec01[3];
   double vec02[3];
   double vec12[3];
@@ -207,14 +227,19 @@ void get_barycentric(Triangle& t, double point[3], double barycentric[3])
     vec01[i] = t.v[1].position[i] - t.v[0].position[i];
     vec02[i] = t.v[2].position[i] - t.v[0].position[i];
     vec12[i] = t.v[2].position[i] - t.v[1].position[i];
-    vec0point[3] = point[i] = t.v[0].position[i];
-    vec1point[3] = point[i] = t.v[1].position[i];
+    vec0point[i] = point[i] - t.v[0].position[i];
+    vec1point[i] = point[i] - t.v[1].position[i];
   }
   double total_area = Utilities::triangle_area(vec01, vec02);
-  std::cout << "AREA: " << total_area << std::endl;
+
   barycentric[0] = Utilities::triangle_area(vec01, vec0point) / total_area;
   barycentric[1] = Utilities::triangle_area(vec12, vec1point) / total_area;
   barycentric[2] = 1.0 - barycentric[1] - barycentric[0];
+
+  // std::cout << "barycentric" << std::endl;
+  // for(int i = 0; i < 3; ++i) {
+  //   std::cout << barycentric[i] << std::endl;
+  // }
 }
 
 void interpolated_normal(double barycentric[3], Vertex v[3], double res[])
@@ -243,10 +268,11 @@ double interpolated_shininess(double barycentric[3], Vertex v[3])
   return barycentric[0] * v[0].shininess + barycentric[1] * v[1].shininess + barycentric[2] * v[2].shininess;
 }
 
-void local_phong_triangle(Triangle& t, double point[3], double colors[])
+void local_phong_triangle(int col_index, double point[3], double colors[])
 {
+  Triangle t = triangles[col_index];
   double q = Utilities::magnitude(point);
-  double divide_mag = 1.0 / ( a * pow(a, 2.0) + b + q + c);
+  double divide_mag = a * pow(q, 2.0) + b * q + c;
 
   for(int i = 0; i < 3; ++i) {
     colors[i] = 0.0;
@@ -260,15 +286,18 @@ void local_phong_triangle(Triangle& t, double point[3], double colors[])
   Utilities::normalize(surface_normal);
 
   double surface_color_diffuse[3];
-  interpolated_color_specular(barycentric, t.v, surface_color_diffuse);
+  interpolated_color_diffuse(barycentric, t.v, surface_color_diffuse);
 
   double surface_color_specular[3];
   interpolated_color_specular(barycentric, t.v, surface_color_specular);
+
 
   double surface_shininess = interpolated_shininess(barycentric, t.v);
 
   for(int l = 0; l < num_lights; ++l) {
     if(!can_see_light(point, lights[l])) {
+
+      // std::cout << "blocked: " << l << std::endl;
       continue;
     }
     double colors_from_light[3];
@@ -277,6 +306,10 @@ void local_phong_triangle(Triangle& t, double point[3], double colors[])
       colors[i] += colors_from_light[i];
     }
   }
+
+  for(int i = 0; i < 3; ++i) {
+    colors[i] += ambient_light[i];
+  }
 }
 
 void generate_color_for_ray(Ray& r, double colors[3])
@@ -284,56 +317,52 @@ void generate_color_for_ray(Ray& r, double colors[3])
   double t;
   double min_coorinates[3];
   std::string type;
-  Triangle* min_tri;
-  Sphere* min_sphere;
+  int col_index;
 
-  bool exists_intersect = find_closest_intersection(r, t, min_coorinates, type, &min_tri, &min_sphere);
-  // std::cout << "INTERSECT" << std::endl;
-  // std::cout << exists_intersect << std::endl;
-  // std::cout << type << std::endl;
-  // for(int i = 0; i < 3; ++i) {
-  //   std::cout << min_coorinates[i] << std::endl;
-  // }
+  bool exists_intersect = find_closest_intersection(r, t, min_coorinates, type, col_index);
+
   if(!exists_intersect) {
     for(int i = 0; i < 3; ++i) {
       colors[i] = ambient_light[i];
     }
   } else if(type == "tri") {
-    std::cout << type << std::endl;
-    local_phong_triangle(*min_tri, min_coorinates, colors);
+    local_phong_triangle(col_index, min_coorinates, colors);
   } else if(type == "sphere") {
-    std::cout << type << std::endl;
-    local_phong_sphere(*min_sphere, min_coorinates, colors);
+    local_phong_sphere(col_index, min_coorinates, colors);
   } 
 }
 
-Ray** cast_rays()
+double*** cast_rays()
 {
   double tan_fov_over_2 = tan(fov/2.0);
-  Ray*** rays = new Ray**[WIDTH];
 
-  double x_coord_base = -1.0 * aspect_ratio * tan_fov_over_2;
+  Ray*** rays = new Ray**[WIDTH];
+  double*** all_colors = new double**[WIDTH];
+
+  double x_coord_base = 1.0 * aspect_ratio * tan_fov_over_2;
+  double y_coord_base = 1.0 * tan_fov_over_2;
 
   for(unsigned int x = 0; x < WIDTH; ++x)
   {
     rays[x] = new Ray*[HEIGHT];
+    all_colors[x] = new double*[HEIGHT];
     double x_coord = x_coord_base + (float(x) / WIDTH) * -2.0 * x_coord_base;
-    double y_coord_base = -1.0 * tan_fov_over_2;
     for(unsigned int y = 0; y < HEIGHT; ++y)
     {
       double y_coord = y_coord_base + (float(y) / HEIGHT) * -2.0 * y_coord_base;
       rays[x][y] = new Ray(x_coord, y_coord, -1.0);
-      double colors[3];
-      generate_color_for_ray(*(rays[x][y]), colors);
-
+      all_colors[x][y] = new double[3];
+      generate_color_for_ray(*(rays[x][y]), all_colors[x][y]);
     }
   }
+  return all_colors;
 }
 
 //MODIFY THIS FUNCTION
 void draw_scene()
 {
-  cast_rays();
+  double*** all_colors = cast_rays();
+  double* colors_for_ray;
   //a simple test output
   for(unsigned int x=0; x<WIDTH; x++)
   {
@@ -341,7 +370,12 @@ void draw_scene()
     glBegin(GL_POINTS);
     for(unsigned int y=0; y<HEIGHT; y++)
     {
-      plot_pixel(x, y, x % 256, y % 256, (x+y) % 256);
+      colors_for_ray = all_colors[x][y];
+      // std::cout << "colors" << std::endl;
+      // for(int i = 0; i < 3; ++i) {
+      //   std::cout << colors_for_ray[i] << std::endl;
+      // }
+      plot_pixel(x, y, colors_for_ray[0], colors_for_ray[1], colors_for_ray[2]);
     }
     glEnd();
     glFlush();
@@ -351,7 +385,7 @@ void draw_scene()
 
 void plot_pixel_display(int x, int y, unsigned char r, unsigned char g, unsigned char b)
 {
-  glColor3f(((float)r) / 255.0f, ((float)g) / 255.0f, ((float)b) / 255.0f);
+  glColor3f(((float)r / 255.0), ((float)g / 255.0), ((float)b / 255.0));
   glVertex2i(x,y);
 }
 
@@ -538,6 +572,12 @@ int main(int argc, char ** argv)
 
   glutInit(&argc,argv);
   loadScene(argv[1]);
+
+  // double intersection[3];
+  // double t;
+  // Ray r1(5.49202, -1.63218, 0.446906);
+  // std::cout << r1.intersection(triangles[1], intersection, t) << std::endl;
+  // std::cout << "t: " << t << std::endl;
 
   glutInitDisplayMode(GLUT_RGBA | GLUT_SINGLE);
   glutInitWindowPosition(0,0);

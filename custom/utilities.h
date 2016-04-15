@@ -36,16 +36,17 @@ class Utilities {
       }
     }
 
-    static void normal(double vec1[], double vec2[], double res[]) {
-      Utilities::cross_product(vec1, vec2, res);
-      Utilities::normalize(res);
-    }
-
     static void cross_product(double vec1[], double vec2[], double res[]) {
       res[0] = vec1[1] * vec2[2] - vec1[2] * vec2[1];
       res[1] = -1.0f * (vec1[0] * vec2[2] - vec1[2] * vec2[0]);
       res[2] = vec1[0] * vec2[1] - vec1[1] * vec2[0];
     }
+
+    static void normal(double vec1[], double vec2[], double res[]) {
+      Utilities::cross_product(vec1, vec2, res);
+      Utilities::normalize(res);
+    }
+
 
     static double dot_product(std::vector<double>& vec1, double vec2[]) {
       Utilities::dot_product(vec2, vec1);
@@ -92,13 +93,13 @@ class Utilities {
       trial_vec[0] = 1.0;
       trial_vec[1] = 0.0;
       trial_vec[2] = 0.0;
-      if(Utilities::dot_product(trial_vec, tri_vec_1) == 0.0) return 0;
+      if(Utilities::dot_product(trial_vec, tri_vec_1) != 0.0) return 0;
       trial_vec[0] = 0.0;
       trial_vec[1] = 1.0;
-      if(Utilities::dot_product(trial_vec, tri_vec_1) == 0.0) return 1;
+      if(Utilities::dot_product(trial_vec, tri_vec_1) != 0.0) return 1;
       trial_vec[1] = 0.0;
       trial_vec[2] = 1.0;
-      if(Utilities::dot_product(trial_vec, tri_vec_1) == 0.0) return 2;
+      if(Utilities::dot_product(trial_vec, tri_vec_1) != 0.0) return 2;
       return -1;
     }
 
@@ -110,7 +111,7 @@ class Utilities {
 
     static void duplicate(double to_dup[], double dup[]) {
       for(int i = 0; i < 3; ++i) {
-        to_dup[i] = dup[i];
+        dup[i] = to_dup[i];
       }
     }
 };

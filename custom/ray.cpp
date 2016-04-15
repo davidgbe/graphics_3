@@ -80,12 +80,9 @@ bool Ray::intersection(Triangle& tri, double intersection_point[3], double& t) {
 
   double interect_with_plane_t;
   bool exists_intersect = intersect_with_plane(vec1, vec2, tri.v[0].position, interect_with_plane_t);
-
-  if(!exists_intersect) return false;
-
+  if(!exists_intersect || interect_with_plane_t < 0.0) return false;
   int plane = Utilities::non_ortho_plane(vec1, vec2);
   if(plane == -1) return false;
-
   double ray_intersect[3];
   for(int i = 0; i < 3; ++i) {
     ray_intersect[i] = start[i] + vec[i] * interect_with_plane_t;
@@ -106,15 +103,55 @@ bool Ray::intersection(Triangle& tri, double intersection_point[3], double& t) {
       ++to_set;
     }
   }
+  // std::cout << "RAY INTERSECT" << std::endl;
+  // for(int i = 0; i < 2; ++i) {
+  //   std::cout << ray_intersect_2d[i] << std::endl;
+  // }
+  // std::cout << "vec1" << std::endl;
+  // for(int i = 0; i < 2; ++i) {
+  //   std::cout << vec1_2d[i] << std::endl;
 
-  double v = vec2_2d[0] * (ray_intersect_2d[1] - tri_base_point[1]);
-  v -= vec2_2d[1] * (ray_intersect_2d[0] - tri_base_point[0]);
-  v /= (vec1_2d[0] * (vec2_2d[0] - vec2_2d[1]));
+  // }
+  // std::cout << "vec2" << std::endl;
+  // for(int i = 0; i < 2; ++i) {
+  //   std::cout << vec2_2d[i] << std::endl;
 
-  if(v > 1.0) return false;
+  // }
+  // std::cout << "base" << std::endl;
+  // for(int i = 0; i < 2; ++i) {
+  //   std::cout << tri_base_point[i] << std::endl;
 
-  double u = (ray_intersect_2d[0] - tri_base_point[0]) - vec1_2d[0] * v;
-  u /= vec2_2d[0];
+  // }
+  
+  double u, v;
+
+  if(vec2_2d[0] == 0.0) {
+    if(vec2_2d[1] == 0.0) {
+      return false;
+    } else if (vec1_2d[0] == 0.0) {
+      return false;
+    } else {
+      v = (ray_intersect_2d[0] - tri_base_point[0]) / vec1_2d[0];
+      u = (ray_intersect_2d[1] - tri_base_point[1] - vec1_2d[1]*v) / vec2_2d[1];
+    }
+
+  } else if(vec1_2d[1] == 0.0) {
+    if(vec2_2d[1] == 0.0) {
+      return false;
+    } else if (vec1_2d[0] == 0.0) {
+      return false;
+    } else {
+      u = (ray_intersect_2d[1] - tri_base_point[1]) / vec2_2d[1];
+      v = (ray_intersect_2d[0] - tri_base_point[0] - vec2_2d[0]) / vec1_2d[0];
+    }
+  } else {
+    v = vec2_2d[0] * (ray_intersect_2d[1] - tri_base_point[1]);
+    v -= (vec2_2d[1] * (ray_intersect_2d[0] - tri_base_point[0]));
+    v /= (vec2_2d[0] * vec1_2d[1] - vec2_2d[1] * vec1_2d[0]);
+
+    u = ray_intersect_2d[0] - tri_base_point[0] - vec1_2d[0] * v;
+    u /= vec2_2d[0];
+  }
 
   if(u < 0.0 || v < 0.0) return false;
   if(u + v > 1.0) return false; 
@@ -122,6 +159,7 @@ bool Ray::intersection(Triangle& tri, double intersection_point[3], double& t) {
   if(t < 0.0) {
     return false;
   }
+
   for(int i = 0; i < 3; ++i) {
     intersection_point[i] = start[i] + vec[i] * t;
   }
@@ -139,7 +177,7 @@ void Ray::set_start_and_vector(double start_x, double start_y, double start_z, d
 
 bool Ray::intersect_with_plane(double vec1[], double vec2[], double point[], double& t) {
   double res[3];
-  Utilities::normal(vec1, vec2, res);
+  Utilities::normal(vec2, vec1, res);
   return intersect_with_plane(res, point, t);
 }
 

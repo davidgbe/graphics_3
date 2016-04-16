@@ -5,6 +5,7 @@
 #include <iostream>
 #include <utilities.h>
 
+//creates ray given a starting point and a vector
 Ray::Ray(double start_x, double start_y, double start_z, double vec_x, double vec_y, double vec_z) {
   set_start_and_vector(start_x, start_y, start_z, vec_x, vec_y, vec_z);
 }
@@ -23,6 +24,7 @@ Ray::Ray(std::vector<double>& vec) {
 
 Ray::~Ray() {}
 
+//calculates a ray's intersection with a sphere, if it exists
 bool Ray::intersection(Sphere& s, double intersection_point[3], double& t) {
   double a, b, c = 0.0;
   double center_start_diff;
@@ -69,6 +71,7 @@ bool Ray::intersection(Sphere& s, double intersection_point[3], double& t) {
   return true;
 }
 
+//calculates a ray's intersection with a triangle, if it exists
 bool Ray::intersection(Triangle& tri, double intersection_point[3], double& t) {
   double vec1[3];
   double vec2[3];
@@ -79,8 +82,10 @@ bool Ray::intersection(Triangle& tri, double intersection_point[3], double& t) {
   }
 
   double interect_with_plane_t;
+  //determine if ray intersects plane triangle lies in
   bool exists_intersect = intersect_with_plane(vec1, vec2, tri.v[0].position, interect_with_plane_t);
   if(!exists_intersect || interect_with_plane_t < 0.0) return false;
+  //determine a plane to project to
   int plane = Utilities::non_ortho_plane(vec1, vec2);
   if(plane == -1) return false;
   double ray_intersect[3];
@@ -93,6 +98,7 @@ bool Ray::intersection(Triangle& tri, double intersection_point[3], double& t) {
   double vec2_2d[2];
   double tri_base_point[2];
 
+  //project to 2D
   int to_set = 0;
   for(int i = 0; i < 3; ++i) {
     if(i != plane) {
@@ -104,6 +110,7 @@ bool Ray::intersection(Triangle& tri, double intersection_point[3], double& t) {
     }
   }
   
+  //calculate u, v
   double u, v;
 
   if(vec2_2d[0] == 0.0) {
@@ -162,15 +169,8 @@ bool Ray::intersect_with_plane(double vec1[], double vec2[], double point[], dou
   return intersect_with_plane(res, point, t);
 }
 
+//determine if ray intersect a plane
 bool Ray::intersect_with_plane(double normal[], double point[], double& t) {
-  // std::cout << "normal" << std::endl;
-  // for(int i = 0; i < 3; ++i) {
-  //   std::cout << normal[i] << std::endl;
-  // }
-  // std::cout << "vec" << std::endl;
-  // for(int i = 0; i < 3; ++i) {
-  //   std::cout << vec[i] << std::endl;
-  // }
   double d = Utilities::dot_product(normal, point);
   double normal_dot_ray_vec = Utilities::dot_product(normal, vec);
 

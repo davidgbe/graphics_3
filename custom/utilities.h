@@ -6,6 +6,8 @@
 #include <vector>
 #include <string>
 
+//utilities file for a bunch of mathematical functions
+//most of these are self-explanatory
 class Utilities {
   public:
     static double calc_triangle_area(double vec1[], double vec2[]) {
@@ -89,6 +91,7 @@ class Utilities {
       return 0.5 * Utilities::magnitude(total_area_vec);
     }
 
+    //determines a plane not orthogonal to a plane given by two vectors
     static int non_ortho_plane(double tri_vec_1[], double tri_vec_2[]) {
       double cross_prod[3];
       Utilities::cross_product(tri_vec_1, tri_vec_2, cross_prod);

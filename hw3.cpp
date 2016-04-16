@@ -81,6 +81,7 @@ void plot_pixel_display(int x,int y,unsigned char r,unsigned char g,unsigned cha
 void plot_pixel_jpeg(int x,int y,unsigned char r,unsigned char g,unsigned char b);
 void plot_pixel(int x,int y,unsigned char r,unsigned char g,unsigned char b);
 
+//iterates through all triangles and spheres to find the closest intersection
 bool find_closest_intersection(
   Ray& r,
   double& min_t,
@@ -123,6 +124,7 @@ bool find_closest_intersection(
   return exists_intersect;
 }
 
+//checks to see if a point can see a light
 bool can_see_light(double point[3], Light& l)
 {
   double t;
@@ -141,6 +143,7 @@ bool can_see_light(double point[3], Light& l)
   return true;
 }
 
+//evaluates the phong light contribution for a single light
 void local_phong(double color_diffuse[3], double color_specular[3], double shininess, double point[3], double surface_normal[3], Light& light, double divide_mag, double colors[])
 {
   double normal_to_light[3];
@@ -172,6 +175,7 @@ void local_phong(double color_diffuse[3], double color_specular[3], double shini
   }
 }
 
+//evaluates the color of a point on a sphere 
 void local_phong_sphere(int col_index, double point[3], double colors[])
 {
   Sphere s = spheres[col_index];
@@ -206,6 +210,7 @@ void local_phong_sphere(int col_index, double point[3], double colors[])
   }
 }
 
+//generates barycentric coordinates givena triangle and a point on it
 void get_barycentric(Triangle& t, double point[3], double barycentric[3])
 {
   double vec01[3];
@@ -227,6 +232,7 @@ void get_barycentric(Triangle& t, double point[3], double barycentric[3])
   barycentric[2] = 1.0 - barycentric[1] - barycentric[0];
 }
 
+//calculates interpolated normal for a point given barycentric coordinates and an array of vertices
 void interpolated_normal(double barycentric[3], Vertex v[3], double res[])
 {
   for(int i = 0; i < 3; ++i) {
@@ -234,6 +240,7 @@ void interpolated_normal(double barycentric[3], Vertex v[3], double res[])
   }
 }
 
+//calculates interpolated diffuse color for a point given barycentric coordinates and an array of vertices
 void interpolated_color_diffuse(double barycentric[3], Vertex v[3], double res[])
 {
   for(int i = 0; i < 3; ++i) {
@@ -241,6 +248,7 @@ void interpolated_color_diffuse(double barycentric[3], Vertex v[3], double res[]
   }
 }
 
+//calculates interpolated specular color for a point given barycentric coordinates and an array of vertices
 void interpolated_color_specular(double barycentric[3], Vertex v[3], double res[])
 {
   for(int i = 0; i < 3; ++i) {
@@ -248,11 +256,13 @@ void interpolated_color_specular(double barycentric[3], Vertex v[3], double res[
   }
 }
 
+//calculates interpolated shininess for a point given barycentric coordinates and an array of vertices
 double interpolated_shininess(double barycentric[3], Vertex v[3])
 {
   return barycentric[0] * v[0].shininess + barycentric[1] * v[1].shininess + barycentric[2] * v[2].shininess;
 }
 
+//generates a color for a point on a triangle
 void local_phong_triangle(int col_index, double point[3], double colors[])
 {
   Triangle t = triangles[col_index];
@@ -294,6 +304,7 @@ void local_phong_triangle(int col_index, double point[3], double colors[])
   }
 }
 
+//generate a color for a ray
 void generate_color_for_ray(Ray& r, double colors[3])
 {
   double t;
@@ -314,6 +325,7 @@ void generate_color_for_ray(Ray& r, double colors[3])
   } 
 }
 
+//cast rays for each pixel in the window and evaluate a color for each
 double*** cast_rays()
 {
   double tan_fov_over_2 = tan(fov/2.0);
@@ -340,7 +352,7 @@ double*** cast_rays()
   return all_colors;
 }
 
-//MODIFY THIS FUNCTION
+//casts rays and draws the scene
 void draw_scene()
 {
   double*** all_colors = cast_rays();

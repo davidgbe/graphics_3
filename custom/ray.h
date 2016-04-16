@@ -7,6 +7,10 @@
 #include <vertex.h>
 #include <triangle.h>
 
+/*
+    Class that contains a vector and starting point.
+    Provides methods for intersection logic.
+*/
 class Ray {
   public:
     Ray(double start_x, double start_y, double start_z, double vec_x, double vec_y, double vec_z);

@@ -69,7 +69,7 @@ Sphere spheres[MAX_SPHERES];
 Light lights[MAX_LIGHTS];
 double ambient_light[3];
 
-double a = 0.000005;
+double a = 0.000001;
 double b = 0.000002;
 double c = 0.004;
 
@@ -305,7 +305,7 @@ void generate_color_for_ray(Ray& r, double colors[3])
 
   if(!exists_intersect) {
     for(int i = 0; i < 3; ++i) {
-      colors[i] = ambient_light[i];
+      colors[i] = 230.0;
     }
   } else if(type == "tri") {
     local_phong_triangle(col_index, min_coorinates, colors);
